@@ -1,20 +1,78 @@
-import React from 'react'
-import {styled} from '@mui/material'
+import Upload from "./contracts/ddrive.json";
+import { useState, useEffect } from "react";
+import { ethers } from "ethers";
+import FileUpload from "./components/FileUpload";
+import Display from "./components/Display";
+import Modal from "./components/Modal";
+import "./App.css";
 
+function App() {
+  const [account, setAccount] = useState("");
+  const [contract, setContract] = useState(null);
+  const [provider, setProvider] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
-const Cont = styled('div')({
-  background: "radial-gradient(circle, #d16ba5, #c777b9, #ba83ca, #aa8fd8, #9a9ae1, #8aa7ec, #79b3f4, #69bff8, #52cffe, #41dfff, #46eefa, #5ffbf1)",
-width: '100%',
-height: "100vh",
+  useEffect(() => {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
 
-})
+    const loadProvider = async () => {
+      if (provider) {
+        window.ethereum.on("chainChanged", () => {
+          window.location.reload();
+        });
 
-export default function App() {
+        window.ethereum.on("accountsChanged", () => {
+          window.location.reload();
+        });
+        await provider.send("eth_requestAccounts", []);
+        const signer = provider.getSigner();
+        const address = await signer.getAddress();
+        setAccount(address);
+        let contractAddress = "0x4f49326bdc3643b9e2546bF54e2f975767Ad95Ce";
+
+        const contract = new ethers.Contract(
+          contractAddress,
+          Upload.abi,
+          signer
+        );
+        //console.log(contract);
+        setContract(contract);
+        setProvider(provider);
+      } else {
+        console.error("Metamask is not installed");
+      }
+    };
+    provider && loadProvider();
+  }, []);
   return (
     <>
-    <Cont>
-hew
-    </Cont>
+      {!modalOpen && (
+        <button className="share" onClick={() => setModalOpen(true)}>
+          Share
+        </button>
+      )}
+      {modalOpen && (
+        <Modal setModalOpen={setModalOpen} contract={contract}></Modal>
+      )}
+
+      <div className="App">
+        <h1 style={{ color: "white" }}>Gdrive 3.0</h1>
+        <div class="bg"></div>
+        <div class="bg bg2"></div>
+        <div class="bg bg3"></div>
+
+        <p style={{ color: "white" }}>
+          Account : {account ? account : "Not connected"}
+        </p>
+        <FileUpload
+          account={account}
+          provider={provider}
+          contract={contract}
+        ></FileUpload>
+        <Display contract={contract} account={account}></Display>
+      </div>
     </>
-  )
+  );
 }
+
+export default App;
